@@ -1,0 +1,169 @@
+//------------------------------------------------
+//--- 010 Editor v14.0.1 Binary Template
+//
+//      File: IDX.bt
+//   Authors: akio7624
+//   Version: 1.0
+//   Purpose: Parsing idx files found alongside apk archive files in some console games.
+//  Category: Game
+// File Mask: *.idx
+//  ID Bytes: 45 4E 44 49 4C 54 4C 45  // ENDILTLE
+//   History: 
+//   1.0   2024-11-01 Initial release
+//
+//------------------------------------------------
+//
+// For detailed file structure information,
+// please refer to https://github.com/akio7624/ymtools/blob/master/README_en.md
+//
+// This template was created based on the QuickBMS script dragon_ball_z_boz.bms and
+// the author's analysis.
+// Although not all fields have been fully analyzed,
+// there should be no issues with extracting or packing files.
+// If you'd like to share additional information, please send an email to akio7624@proton.me
+//
+
+// table header: cLtGreen
+// table padding, size: cLtAqua
+// unknown: cLtGray
+// hash, zero: cSilver
+
+
+
+// ===================================== method =====================================
+
+// Calculate the padding for all tables except for ENDILTLE, PACKHEDR, and GENEEOF.
+// When viewing in a hex viewer in 16-byte units, pad the end of each table with 00 so that the last line is fully filled.
+uint64 GetTablePaddingCount() {
+    local uint64 current = FTell();
+    if(current % 16 == 0) return 0;
+    
+    return 16 - (current % 16);
+}
+
+
+// Find and return the root file's name in the GENESTRT table using NAME_IDX.
+string GetFnameFromNameIdx(uint32 name_idx) {
+    local string fname = GENESTRT.FILE_NAMES[name_idx].fname;
+    if(Strcmp(fname, "") == 0){
+        return "(empty string)";
+    }else {
+        return fname;
+    }
+}
+
+
+// Add comments to explain the meaning of the IDENTIFIER value in TOC_SEGMENT.
+string MakeTocIdentifierComment(uint32 identifier) {
+    if(identifier == 0) {
+        return "Uncompressed file (raw)";
+    }else if(identifier == 1) {
+        return "Assumed to be a directory";
+    }else if(identifier == 512) {
+        return "File compressed with zlib.";
+    }else{
+        return Str("%d is an unknown IDENTIFIER. Please report it.", identifier);
+    }
+}
+
+// ==================================================================================
+
+
+
+// ===================================== common struct =====================================
+struct _ENDILTLE {
+    char SIGNATURE[8] <bgcolor=cLtGreen>;
+    byte padding[8] <bgcolor=cLtAqua>;
+};
+
+struct _PACKHEDR {
+    char SIGNATURE[8] <bgcolor=cLtGreen>;
+    uint64 TABLE_SIZE <bgcolor=cLtAqua>;
+    byte unknown_1[8] <bgcolor=cLtGray>;
+    uint32 FILE_LIST_OFFSET <format=hex, bgcolor=cLtRed>;
+    byte unknown_2[4] <bgcolor=cLtGray>;
+    byte HASH[16] <format=hex, bgcolor=cSilver>;
+};
+
+struct _TOC_SEGMENT {
+    uint32 IDENTIFIER <fgcolor=cWhite, bgcolor=cDkPurple, comment=MakeTocIdentifierComment(this)>;
+    uint32 NAME_IDX <bgcolor=0x8d917a, comment=GetFnameFromNameIdx(this)>;
+    byte ZERO[8] <bgcolor=0xa7b193>;
+    uint64 FILE_OFFSET <format=hex, bgcolor=0xa2c299>;
+    uint64 FILE_SIZE <bgcolor=0x97d1ad>;
+    uint64 FILE_ZSIZE <bgcolor=0xb8fedb>;
+};
+
+struct _PACKTOC {
+    char SIGNATURE[8] <bgcolor=cLtGreen>;
+    uint64 TABLE_SIZE <bgcolor=cLtAqua>;
+    uint32 TOC_SEG_SIZE <bgcolor=cLtPurple>;
+    uint32 TOC_SEG_COUNT <bgcolor=cPurple>;
+    byte unknown_1[8] <bgcolor=cLtGray>;
+    _TOC_SEGMENT TOC_SEGMENT_LIST[TOC_SEG_COUNT] <comment=Str("Segment for file '%s'", GetFnameFromNameIdx(this.NAME_IDX))>;
+};
+
+struct _ARCHIVE_SEGMENT {
+    uint32 NAME_IDX <fgcolor=cWhite, bgcolor=cDkPurple, comment=GetFnameFromNameIdx(this)>;
+    byte ZERO[4] <bgcolor=0x8d917a>;
+    uint64 ARCHIVE_OFFSET <bgcolor=0xa7b193>;
+    uint64 ARCHIVE_SIZE <format=hex, bgcolor=0xa2c299>;
+    byte ARCHIVE_HASH[16] <format=hex, bgcolor=0xb8fedb>;
+};
+
+struct _PACKFSLS {
+    char SIGNATURE[8] <bgcolor=cLtGreen>;
+    uint64 TABLE_SIZE <bgcolor=cLtAqua>;
+    uint32 ARCHIVE_SEG_COUNT <bgcolor=cPurple>;
+    uint32 ARCHIVE_SEG_SIZE <bgcolor=cLtPurple>;
+    byte unknown_1[4] <bgcolor=cLtGray>;
+    byte unknown_2[4] <bgcolor=cLtGray>;
+    _ARCHIVE_SEGMENT ARCHIVE_SEGMENT_LIST[ARCHIVE_SEG_COUNT] <comment=Str("Segment for archive '%s'", GetFnameFromNameIdx(this.NAME_IDX))>;
+};
+
+struct FILENAME {
+    string fname;
+};
+
+struct _GENESTRT {
+    char SIGNATURE[8] <bgcolor=cLtGreen>;
+    uint64 TABLE_SIZE_1 <bgcolor=cLtAqua>;
+    uint32 STR_OFFSET_COUNT <bgcolor=cPurple>;
+    byte unknown_1[4] <bgcolor=cLtGray>;
+    uint32 TABLE_SIZE_AND_FILENAME_OFFSET_LIST_SIZE <bgcolor=0xe3cfef>;
+    uint32 TABLE_SIZE_2 <bgcolor=0xb29aea>;
+    uint32 FILENAME_OFFSET_LIST[STR_OFFSET_COUNT] <bgcolor=cLtRed>;
+    byte GENESTRT_PADDING[GetTablePaddingCount()] <bgcolor=cLtAqua>;
+    FILENAME FILE_NAMES[STR_OFFSET_COUNT] <optimize=false, bgcolor=0xddf6d6, read=(fname)>;
+};
+
+struct _GENEEOF {
+    char SIGNATURE[8] <bgcolor=cLtGreen>;
+    byte padding[8] <bgcolor=cLtAqua>;
+};
+
+// ==================================================================================
+
+
+
+// ===================================== File analysis area. =====================================
+LittleEndian();  // Use Little Endian
+
+_ENDILTLE ENDILTLE;
+
+while(true) {
+    if(Strcmp(ReadString(FTell(), 8), "PACKHEDR") != 0) { break; }
+    
+    _PACKHEDR PACKHEDR;
+}
+
+_PACKTOC PACKTOC;
+byte PACKTOC_PADDING[GetTablePaddingCount()] <bgcolor=cLtAqua>;
+
+_PACKFSLS PACKFSLS;
+byte PACKFSLS_PADDING[GetTablePaddingCount()] <bgcolor=cLtAqua>;
+
+_GENESTRT GENESTRT;
+byte GENESTRT_PADDING[GetTablePaddingCount()] <bgcolor=cLtAqua>;
+
+_GENEEOF GENEEOF;

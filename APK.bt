@@ -1,0 +1,360 @@
+//------------------------------------------------
+//--- 010 Editor v14.0.1 Binary Template
+//
+//      File: APK.bt
+//   Authors: akio7624
+//   Version: 1.0
+//   Purpose: Parse APK archives found in some console games (not Android APKs)
+//  Category: Game
+// File Mask: *.apk
+//  ID Bytes: 45 4E 44 49 4C 54 4C 45  // ENDILTLE
+//   History: 
+//   1.0   2024-11-01 Initial release
+//
+//------------------------------------------------
+//
+// For detailed file structure information,
+// please refer to https://github.com/akio7624/ymtools/blob/master/README_en.md
+//
+// This template was created based on the QuickBMS script dragon_ball_z_boz.bms and
+// the author's analysis.
+// Although not all fields have been fully analyzed,
+// there should be no issues with extracting or packing files.
+// If you'd like to share additional information, please send an email to akio7624@proton.me
+// 
+// 
+// table header: cLtGreen
+// table padding, size: cLtAqua
+// archive padding: cAqua
+// unknown: cLtGray
+// hash, zero: cSilver
+
+
+
+// You need a library with a hashmap feature to quickly display filenames contained in a template's result.
+// Please place the .dll file for Windows or the .so file for Linux in the same folder as the template file, then execute template.
+#link "LibApkIdxTemplate"
+    void AddRootFileOffsetAndNameIdx(int offset, int name_idx);
+    int GetRootFileNameIdxFromOffset(int offset);
+    void AddArchiveFileOffsetAndNameIdx(int offset, int name_idx);
+    int GetArchiveFileNameIdxFromOffset(int offset);
+    void ClearArchiveFileOffsetAndNameIdx();
+#endlink 
+
+
+
+// ===================================== common struct =====================================
+struct _ENDILTLE {
+    char SIGNATURE[8] <bgcolor=cLtGreen>;
+    byte padding[8] <bgcolor=cLtAqua>;
+};
+
+struct _PACKHEDR {
+    char SIGNATURE[8] <bgcolor=cLtGreen>;
+    uint64 TABLE_SIZE <bgcolor=cLtAqua>;
+    byte unknown_1[8] <bgcolor=cLtGray>;
+    uint32 FILE_LIST_OFFSET <format=hex, bgcolor=cLtRed>;
+    byte unknown_2[4] <bgcolor=cLtGray>;
+    byte HASH[16] <format=hex, bgcolor=cSilver>;
+};
+
+struct _TOC_SEGMENT {
+    uint32 IDENTIFIER <fgcolor=cWhite, bgcolor=cDkPurple, comment=MakeTocIdentifierComment(this)>;
+    uint32 NAME_IDX <bgcolor=0x8d917a, comment=GetFnameFromNameIdx(this)>;
+    byte ZERO[8] <bgcolor=0xa7b193>;
+    uint64 FILE_OFFSET <format=hex, bgcolor=0xa2c299>;
+    uint64 FILE_SIZE <bgcolor=0x97d1ad>;
+    uint64 FILE_ZSIZE <bgcolor=0xb8fedb>;
+};
+
+struct _PACKTOC {
+    char SIGNATURE[8] <bgcolor=cLtGreen>;
+    uint64 TABLE_SIZE <bgcolor=cLtAqua>;
+    uint32 TOC_SEG_SIZE <bgcolor=cLtPurple>;
+    uint32 TOC_SEG_COUNT <bgcolor=cPurple>;
+    byte unknown_1[8] <bgcolor=cLtGray>;
+    _TOC_SEGMENT TOC_SEGMENT_LIST[TOC_SEG_COUNT] <comment=Str("Segment for file '%s'", GetFnameFromNameIdx(this.NAME_IDX))>;
+};
+
+struct _ARCHIVE_SEGMENT {
+    uint32 NAME_IDX <fgcolor=cWhite, bgcolor=cDkPurple, comment=GetFnameFromNameIdx(this)>;
+    byte ZERO[4] <bgcolor=0x8d917a>;
+    uint64 ARCHIVE_OFFSET <bgcolor=0xa7b193>;
+    uint64 ARCHIVE_SIZE <format=hex, bgcolor=0xa2c299>;
+    byte ARCHIVE_HASH[16] <format=hex, bgcolor=0xb8fedb>;
+};
+
+struct _PACKFSLS {
+    char SIGNATURE[8] <bgcolor=cLtGreen>;
+    uint64 TABLE_SIZE <bgcolor=cLtAqua>;
+    uint32 ARCHIVE_SEG_COUNT <bgcolor=cPurple>;
+    uint32 ARCHIVE_SEG_SIZE <bgcolor=cLtPurple>;
+    byte unknown_1[4] <bgcolor=cLtGray>;
+    byte unknown_2[4] <bgcolor=cLtGray>;
+    _ARCHIVE_SEGMENT ARCHIVE_SEGMENT_LIST[ARCHIVE_SEG_COUNT] <comment=Str("Segment for archive '%s'", GetFnameFromNameIdx(this.NAME_IDX))>;
+};
+
+struct FILENAME {
+    string fname;
+};
+
+struct _GENESTRT {
+    char SIGNATURE[8] <bgcolor=cLtGreen>;
+    uint64 TABLE_SIZE_1 <bgcolor=cLtAqua>;
+    uint32 STR_OFFSET_COUNT <bgcolor=cPurple>;
+    byte unknown_1[4] <bgcolor=cLtGray>;
+    uint32 TABLE_SIZE_AND_FILENAME_OFFSET_LIST_SIZE <bgcolor=0xe3cfef>;
+    uint32 TABLE_SIZE_2 <bgcolor=0xb29aea>;
+    uint32 FILENAME_OFFSET_LIST[STR_OFFSET_COUNT] <bgcolor=cLtRed>;
+    byte GENESTRT_PADDING[GetTablePaddingCount()] <bgcolor=cLtAqua>;
+    FILENAME FILE_NAMES[STR_OFFSET_COUNT] <optimize=false, bgcolor=0xddf6d6, read=(fname)>;
+};
+
+struct _GENEEOF {
+    char SIGNATURE[8] <bgcolor=cLtGreen>;
+    byte padding[8] <bgcolor=cLtAqua>;
+};
+
+// ===================================== ARCHIVE-specific structure =====================================
+
+struct _ARCHIVE_FILE_SEGMENT {
+    uint32 NAME_IDX <bgcolor=cDkPurple>;
+    uint32 ZIP <bgcolor=0x8d917a ,comment=MakeArchiveZipComment(this)>;
+    uint64 FILE_OFFSET <format=hex, bgcolor=0xa7b193>;
+    uint64 FILE_SIZE <bgcolor=0xa2c299>;
+    uint64 FILE_ZSIZE <bgcolor=0x97d1ad>;
+};
+
+struct _PACKFSHD {
+    char SIGNATURE[8] <bgcolor=cLtGreen>;
+    uint64 TABLE_SIZE <bgcolor=cLtAqua>;
+    byte unknown_1[4] <bgcolor=cLtGray>;
+    uint32 FILE_SEG_SIZE <bgcolor=cLtPurple>;
+    uint32 FILE_SEG_COUNT <bgcolor=cPurple>;
+    uint32 FILE_SEG_SIZE2 <bgcolor=cLtPurple>;
+    byte unknown_2[16] <bgcolor=cLtGray>;
+    _ARCHIVE_FILE_SEGMENT ARCHIVE_FILE_SEGMENT[FILE_SEG_COUNT] <name="file", comment=Str("Segment for file '%s'", GetArchiveFnameFromNameIdx(parentof(parentof(this)).GENESTRT, this.NAME_IDX))>;
+};
+
+// ==================================================================================
+
+
+
+// ===================================== method =====================================
+
+// Calculate the padding for all tables except for ENDILTLE, PACKHEDR, and GENEEOF.
+// When viewing in a hex viewer in 16-byte units, pad the end of each table with 00 so that the last line is fully filled.
+uint64 GetTablePaddingCount() {
+    local uint64 current = FTell();
+    if(current % 16 == 0) return 0;
+    
+    return 16 - (current % 16);
+}
+
+
+// Pad the area between the header table of the file and the section where the root files are listed with 00.
+uint64 GetHeaderEndPadding() {
+    local uint64 root_start_offset = PACKHEDR.FILE_LIST_OFFSET;
+    local uint64 current = FTell();
+    
+    return root_start_offset - current;
+}
+
+
+// Receive the unpadded size of a root file or archive, then calculate and return the size including padding.
+int64 GetRootFileBlockSize(uint64 size) {
+    if(size % 512 == 0) { return size; }
+    
+    local uint64 n = (size / 512);
+    local int64 block_size = 0;
+    
+    while(true){
+        block_size = (n * 512);
+        if(size <= block_size) {
+            return block_size;
+        }
+        
+        n++;
+    }
+}
+
+
+// Calculate the padding for files included in the archive.
+// Receive the unpadded file size and return the size including padding.
+int64 GetArchiveFileBlockSize(uint64 size) {
+    if(size % 16 == 0) {
+        return size;
+    } else {
+        return size + (16 - (size % 16));
+    }
+}
+
+
+// Add comments to explain the meaning of the IDENTIFIER value in TOC_SEGMENT.
+string MakeTocIdentifierComment(uint32 identifier) {
+    if(identifier == 0) {
+        return "Uncompressed file (raw)";
+    }else if(identifier == 1) {
+        return "Assumed to be a directory";
+    }else if(identifier == 512) {
+        return "File compressed with zlib.";
+    }else{
+        return Str("%d is an unknown IDENTIFIER. Please report it.", identifier);
+    }
+}
+
+
+// Find and return the root file's name in the GENESTRT table using NAME_IDX.
+string GetFnameFromNameIdx(uint32 name_idx) {
+    local string fname = GENESTRT.FILE_NAMES[name_idx].fname;
+    if(Strcmp(fname, "") == 0){
+        return "(empty string)";
+    }else {
+        return fname;
+    }
+}
+
+
+// Add comments to explain the meaning of the ZIP value in the archive file.
+string MakeArchiveZipComment(uint32 zip) {
+    if(zip == 0) {
+        return "Uncompressed file (raw)";
+    }else if(zip == 2) {
+        return "File compressed with zlib.";
+    }else{
+        return Str("%d is an unknown ZIP. Please report it.", zip);
+    }
+}
+
+
+//Find and return the name of the file included in the archive by using NAME_IDX in the archive's GENESTRT table.
+string GetArchiveFnameFromNameIdx(_GENESTRT &genestrt, uint32 name_idx) {
+    local string fname = genestrt.FILE_NAMES[name_idx].fname;
+    
+    if(Strcmp(fname, "") == 0){
+        return "(empty string)";
+    }else {
+        return fname;
+    }
+}
+// ==================================================================================
+
+
+
+// ===================================== File analysis area. =====================================
+
+local int i = 0;
+
+LittleEndian();  // Use Little Endian
+
+_ENDILTLE ENDILTLE;
+_PACKHEDR PACKHEDR;
+
+_PACKTOC PACKTOC;
+byte PACKTOC_PADDING[GetTablePaddingCount()] <bgcolor=cLtAqua>;
+
+for(i=0; i<PACKTOC.TOC_SEG_COUNT; i++) {
+    AddRootFileOffsetAndNameIdx(PACKTOC.TOC_SEGMENT_LIST[i].FILE_OFFSET, PACKTOC.TOC_SEGMENT_LIST[i].NAME_IDX);
+}
+
+_PACKFSLS PACKFSLS;
+byte PACKFSLS_PADDING[GetTablePaddingCount()] <bgcolor=cLtAqua>;
+
+_GENESTRT GENESTRT;
+byte GENESTRT_PADDING[GetTablePaddingCount()] <bgcolor=cLtAqua>;
+
+_GENEEOF GENEEOF;
+
+byte HEADER_END_PADDING[GetHeaderEndPadding()] <bgcolor=cLtAqua>;
+
+struct _FILE_LIST {
+    local uint64 FILE_OFFSET, FILE_SIZE, FILE_ZSIZE, real_size, padding_count;
+    
+    for(i=0; i<PACKTOC.TOC_SEG_COUNT; i++) {
+        FILE_OFFSET = PACKTOC.TOC_SEGMENT_LIST[i].FILE_OFFSET;
+        FILE_SIZE = PACKTOC.TOC_SEGMENT_LIST[i].FILE_SIZE;
+        FILE_ZSIZE = PACKTOC.TOC_SEGMENT_LIST[i].FILE_ZSIZE;
+        real_size = (FILE_ZSIZE == 0) ? FILE_SIZE : FILE_ZSIZE;
+        
+        if(real_size == 0) continue;
+        
+        FSeek(FILE_OFFSET);
+    
+        padding_count = GetRootFileBlockSize(real_size) - real_size;
+        
+        struct _FILE{
+            local uint32 name_idx = GetRootFileNameIdxFromOffset(FTell());
+            byte data[real_size] <bgcolor=0x72bafb>;
+            if(padding_count != 0) {
+                byte padding[padding_count] <bgcolor=cLtAqua>;
+            }
+        } file <comment=(name_idx == -1 ? "(cannot get file name)" : GENESTRT.FILE_NAMES[name_idx].fname)>;
+    }
+} ROOT_FILES;
+
+
+local uint32 NAME_IDX;
+local uint64 ARCHIVE_OFFSET, ARCHIVE_SIZE;
+for(i=0; i<PACKFSLS.ARCHIVE_SEG_COUNT; i++) {
+    ClearArchiveFileOffsetAndNameIdx();
+                
+    NAME_IDX = PACKFSLS.ARCHIVE_SEGMENT_LIST[i].NAME_IDX;
+    ARCHIVE_OFFSET = PACKFSLS.ARCHIVE_SEGMENT_LIST[i].ARCHIVE_OFFSET;
+    ARCHIVE_SIZE = PACKFSLS.ARCHIVE_SEGMENT_LIST[i].ARCHIVE_SIZE;
+    
+    FSeek(ARCHIVE_OFFSET);
+    
+    struct _ARCHIVE {
+        local int j = 0;
+        _ENDILTLE ENDILTLE;
+        
+        _PACKFSHD PACKFSHD;
+        byte PACKFSHD_PADDING[GetTablePaddingCount()] <bgcolor=cLtAqua>;
+        
+        for(j=0; j<PACKFSHD.FILE_SEG_COUNT; j++) {
+            AddArchiveFileOffsetAndNameIdx(PACKFSHD.ARCHIVE_FILE_SEGMENT[j].FILE_OFFSET, PACKFSHD.ARCHIVE_FILE_SEGMENT[j].NAME_IDX);
+        }
+
+        _GENESTRT GENESTRT;
+        byte GENESTRT_PADDING[GetTablePaddingCount()] <bgcolor=cLtAqua>;
+        
+        _GENEEOF GENEEOF;
+        
+        struct _ARCHIVE_FILE_LIST {
+            local int k = 0;
+            local uint32 NAME_IDX, ZIP;
+            local uint64 FILE_OFFSET, FILE_SIZE, FILE_ZSIZE, real_size, padding_count;
+            
+            for(k=0; k<PACKFSHD.FILE_SEG_COUNT; k++) {
+                NAME_IDX = PACKFSHD.ARCHIVE_FILE_SEGMENT[k].NAME_IDX;
+                ZIP = PACKFSHD.ARCHIVE_FILE_SEGMENT[k].ZIP;
+                FILE_OFFSET = PACKFSHD.ARCHIVE_FILE_SEGMENT[k].FILE_OFFSET;
+                FILE_SIZE = PACKFSHD.ARCHIVE_FILE_SEGMENT[k].FILE_SIZE;
+                FILE_ZSIZE = PACKFSHD.ARCHIVE_FILE_SEGMENT[k].FILE_ZSIZE;
+                real_size = (ZIP != 2) ? FILE_SIZE : FILE_ZSIZE;
+                
+                FSeek(ARCHIVE_OFFSET + FILE_OFFSET);  // Important! The offset of files inside the archive is a relative address for each archive.
+                
+                padding_count = GetArchiveFileBlockSize(real_size) - real_size;
+                
+                struct _ARCHIVE_FILE{
+                    local uint32 name_idx = GetArchiveFileNameIdxFromOffset(FTell() - ARCHIVE_OFFSET);
+                    byte data[real_size] <bgcolor=0x72bafb>;
+                    if(padding_count != 0) {
+                        byte padding[padding_count] <bgcolor=cLtAqua>;
+                    }
+                } file <comment=(name_idx == -1 ? "(cannot get file name)" : parentof(parentof(this)).GENESTRT.FILE_NAMES[name_idx].fname)>;
+            }
+        } ARCHIVE_FILES;
+        
+        if(!FEof()) {  // The last archive listed does not have any padding.
+            byte ARCHIVE_PADDING[GetRootFileBlockSize(ARCHIVE_SIZE) - ARCHIVE_SIZE] <bgcolor=cAqua>;
+        }
+    } ARCHIVE;
+}
+
+// ==================================================================================
+
+
+
+Printf("The template execution is complete.\n");
