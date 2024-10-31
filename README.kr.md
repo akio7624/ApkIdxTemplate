@@ -127,18 +127,18 @@ apk 파일과 idx 파일은 일부 콘솔 게임 등에서 발견되는 포맷�
 
 
 ## GENESTRT 테이블
-|              명칭              |          자료형           |         크기         | 설명                                                                                                                                                                |
-|:----------------------------:|:----------------------:|:------------------:|:------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|          SIGNATURE           |         char[]         |         8          | 테이블의 시그니처 바이트. 항상 `GENESTRT`이다.                                                                                                                                   |
-|         TABLE SIZE 1         |         uint64         |         8          | 테이블의 첫 16바이트를 제외한 테이블의 크기.                                                                                                                                        |
-|        FILENAME COUNT        |         uint32         |         4          | 파일 이름의 개수로, `FILENAME OFFSET LIST`와 `FILE NAMES`가 포함하는 항목의 개수이다.                                                                                                  |
-|          unknown 1           |         byte[]         |         4          | 알 수 없는 영역.<br>여러 파일에서 `10 00 00 00`이 공통으로 보인다.                                                                                                                    |
-|      FILE NAMES OFFSET       |         uint32         |         4          | 테이블 헤더 다음(`STR OFFSET COUNT`의 오프셋)을 기준으로 `FILE NAMES`가 시작되는 상대적인 오프셋이다.<br>간단히 설명하면, `FILENAME OFFSET LIST PADDING`의 마지막 오프셋에서 `FILENAME COUNT`의 시작 오프셋을 뺀 값이다. |
-|         TABLE SIZE 2         |         uint32         |         4          | `TABLE SIZE 1`과 동일한 값으로 추정.<br>이 필드의 존재 이유는 알 수 없음.                                                                                                               |
-|     FILENAME OFFSET LIST     |        uint32[]        | `FILENAME COUNT` | `FILE NAMES` 영역의 시작점을 기준으로 하는<br>각 문자열(파일명)의 오프셋이다.                                                                                                               |
-| FILENAME OFFSET LIST PADDING |         byte[]         |         n          | `FILENAME OFFSET LIST`의 크기가 16바이트로 나누어 떨어지도록 하기 위한 0 패딩.                                                                                                          |
-|          FILE NAMES          |        string[]        | `FILENAME COUNT` | 각 파일명들이 null로 끝나는 문자열들로 나열되어있다.                                                                                                                                   |
-|       GENESTRT PADDING       |         byte[]         |         n          | 테이블의 전체 크기가 16바이트로 나누어 떨어지도록 하기 위한 0 패딩.                                                                                                                          |
+|              명칭              |   자료형    |         크기         | 설명                                                                                                                                                                |
+|:----------------------------:|:--------:|:------------------:|:------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|          SIGNATURE           |  char[]  |         8          | 테이블의 시그니처 바이트. 항상 `GENESTRT`이다.                                                                                                                                   |
+|         TABLE SIZE 1         |  uint64  |         8          | 테이블의 첫 16바이트를 제외한 테이블의 크기.                                                                                                                                        |
+|        FILENAME COUNT        |  uint32  |         4          | 파일 이름의 개수로, `FILENAME OFFSET LIST`와 `FILE NAMES`가 포함하는 항목의 개수이다.                                                                                                  |
+|          unknown 1           |    -     |         4          | 알 수 없는 영역.<br>여러 파일에서 `10 00 00 00`이 공통으로 보인다.                                                                                                                    |
+|      FILE NAMES OFFSET       |  uint32  |         4          | 테이블 헤더 다음(`STR OFFSET COUNT`의 오프셋)을 기준으로 `FILE NAMES`가 시작되는 상대적인 오프셋이다.<br>간단히 설명하면, `FILENAME OFFSET LIST PADDING`의 마지막 오프셋에서 `FILENAME COUNT`의 시작 오프셋을 뺀 값이다. |
+|         TABLE SIZE 2         |  uint32  |         4          | `TABLE SIZE 1`과 동일한 값으로 추정.<br>이 필드의 존재 이유는 알 수 없음.                                                                                                               |
+|     FILENAME OFFSET LIST     | uint32[] | `FILENAME COUNT` | `FILE NAMES` 영역의 시작점을 기준으로 하는<br>각 문자열(파일명)의 오프셋이다.                                                                                                               |
+| FILENAME OFFSET LIST PADDING |  byte[]  |         n          | `FILENAME OFFSET LIST`의 크기가 16바이트로 나누어 떨어지도록 하기 위한 0 패딩.                                                                                                          |
+|          FILE NAMES          | string[] | `FILENAME COUNT` | 각 파일명들이 null로 끝나는 문자열들로 나열되어있다.                                                                                                                                   |
+|       GENESTRT PADDING       |  byte[]  |         n          | 테이블의 전체 크기가 16바이트로 나누어 떨어지도록 하기 위한 0 패딩.                                                                                                                          |
 
 
 ## GENEEOF 테이블
@@ -208,12 +208,12 @@ ROOT 파일들이 모두 나열되었으면 이제 아카이브를 나열할 차
 |:---------------:|:----------------------:|:--------------:|:------------------------------------------------------------------------------------|
 |    SIGNATURE    |         char[]         |       8        | 테이블의 시그니처 바이트. 항상 `PACKFSHD`이다.                                                     |
 |   TABLE SIZE    |         uint64         |       8        | 테이블의 첫 16바이트를 제외한 테이블의 크기.                                                          |
-|    unknown 1    |         byte[]         |       4        | 알 수 없는 영역.<br>여러 파일에서 `00 00 01 00`이 공통으로 보인다.                                      |
+|    unknown 1    |           -            |       4        | 알 수 없는 영역.<br>여러 파일에서 `00 00 01 00`이 공통으로 보인다.                                      |
 |  FILE SEG SIZE  |         uint32         |       4        | `ARCHIVE FILE SEGMENT` 한 개의 크기.<br>다만 이 세그먼트의 구조가 일정한 것 같으므로, 값은 `32`로 고정일 것으로 예상함. |
 | FILE SEG COUNT  |         uint32         |       4        | `ARCHIVE FILE SEGMENT`의 총 개수.                                                       |
 | FILE SEG SIZE 2 |         uint32         |       4        | `FILE SEG SIZE`와 동일한 값으로 추정.<br>이 필드의 존재 이유는 알 수 없음.                                |
 |    unknown 2    |         uint32         |       4        | 32로 나누어 떨어지는 값. 무엇을 의미하는지는 알 수 없다.<br>`FILE SEG COUNT`가 커질수록 이 값도 커지는 경향이있다.        |
-|    unknown 3    |         byte[]         |       12       | 알 수 없는 영역.<br>여러 파일에서 `00 00 00 00 00 00 00 00 00 00 00 00`이 공통으로 보인다.              |
+|    unknown 3    |           -            |       12       | 알 수 없는 영역.<br>여러 파일에서 `00 00 00 00 00 00 00 00 00 00 00 00`이 공통으로 보인다.              |
 |  FILE SEG LIST  | ARCHIVE_FILE_SEGMENT[] | FILE SEG COUNT | `ARCHIVE FILE SEGMENT`가 `FILE SEG COUNT`만큼 나열되어있다.<br>이 세그먼트의 구조는 다음 문단에서 설명한다.      |
 |     PADDING     |         byte[]         |       n        | 테이블의 전체 크기가 16바이트로 나누어 떨어지도록 하기 위한 0 패딩.                                            |
 
@@ -233,18 +233,18 @@ ROOT 파일들이 모두 나열되었으면 이제 아카이브를 나열할 차
 
 
 #### GENESTRT 테이블
-|              명칭              |          자료형           |         크기         | 설명                                                                                                                                                                |
-|:----------------------------:|:----------------------:|:------------------:|:------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|          SIGNATURE           |         char[]         |         8          | 테이블의 시그니처 바이트. 항상 `GENESTRT`이다.                                                                                                                                   |
-|         TABLE SIZE 1         |         uint64         |         8          | 테이블의 첫 16바이트를 제외한 테이블의 크기.                                                                                                                                        |
-|        FILENAME COUNT        |         uint32         |         4          | 파일 이름의 개수로, `FILENAME OFFSET LIST`와 `FILE NAMES`가 포함하는 항목의 개수이다.                                                                                                  |
-|          unknown 1           |         byte[]         |         4          | 알 수 없는 영역.<br>여러 파일에서 `10 00 00 00`이 공통으로 보인다.                                                                                                                    |
-|      FILE NAMES OFFSET       |         uint32         |         4          | 테이블 헤더 다음(`STR OFFSET COUNT`의 오프셋)을 기준으로 `FILE NAMES`가 시작되는 상대적인 오프셋이다.<br>간단히 설명하면, `FILENAME OFFSET LIST PADDING`의 마지막 오프셋에서 `FILENAME COUNT`의 시작 오프셋을 뺀 값이다. |
-|         TABLE SIZE 2         |         uint32         |         4          | `TABLE SIZE 1`과 동일한 값으로 추정.<br>이 필드의 존재 이유는 알 수 없음.                                                                                                               |
-|     FILENAME OFFSET LIST     |        uint32[]        | `FILENAME COUNT` | `FILE NAMES` 영역의 시작점을 기준으로 하는<br>각 문자열(파일명)의 오프셋이다.                                                                                                               |
-| FILENAME OFFSET LIST PADDING |         byte[]         |         n          | `FILENAME OFFSET LIST`의 크기가 16바이트로 나누어 떨어지도록 하기 위한 0 패딩.                                                                                                          |
-|          FILE NAMES          |        string[]        | `FILENAME COUNT` | 각 파일명들이 null로 끝나는 문자열들로 나열되어있다.                                                                                                                                   |
-|       GENESTRT PADDING       |         byte[]         |         n          | 테이블의 전체 크기가 16바이트로 나누어 떨어지도록 하기 위한 0 패딩.                                                                                                                          |
+|              명칭              |   자료형    |         크기         | 설명                                                                                                                                                                |
+|:----------------------------:|:--------:|:------------------:|:------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|          SIGNATURE           |  char[]  |         8          | 테이블의 시그니처 바이트. 항상 `GENESTRT`이다.                                                                                                                                   |
+|         TABLE SIZE 1         |  uint64  |         8          | 테이블의 첫 16바이트를 제외한 테이블의 크기.                                                                                                                                        |
+|        FILENAME COUNT        |  uint32  |         4          | 파일 이름의 개수로, `FILENAME OFFSET LIST`와 `FILE NAMES`가 포함하는 항목의 개수이다.                                                                                                  |
+|          unknown 1           |    -     |         4          | 알 수 없는 영역.<br>여러 파일에서 `10 00 00 00`이 공통으로 보인다.                                                                                                                    |
+|      FILE NAMES OFFSET       |  uint32  |         4          | 테이블 헤더 다음(`STR OFFSET COUNT`의 오프셋)을 기준으로 `FILE NAMES`가 시작되는 상대적인 오프셋이다.<br>간단히 설명하면, `FILENAME OFFSET LIST PADDING`의 마지막 오프셋에서 `FILENAME COUNT`의 시작 오프셋을 뺀 값이다. |
+|         TABLE SIZE 2         |  uint32  |         4          | `TABLE SIZE 1`과 동일한 값으로 추정.<br>이 필드의 존재 이유는 알 수 없음.                                                                                                               |
+|     FILENAME OFFSET LIST     | uint32[] | `FILENAME COUNT` | `FILE NAMES` 영역의 시작점을 기준으로 하는<br>각 문자열(파일명)의 오프셋이다.                                                                                                               |
+| FILENAME OFFSET LIST PADDING |  byte[]  |         n          | `FILENAME OFFSET LIST`의 크기가 16바이트로 나누어 떨어지도록 하기 위한 0 패딩.                                                                                                          |
+|          FILE NAMES          | string[] | `FILENAME COUNT` | 각 파일명들이 null로 끝나는 문자열들로 나열되어있다.                                                                                                                                   |
+|       GENESTRT PADDING       |  byte[]  |         n          | 테이블의 전체 크기가 16바이트로 나누어 떨어지도록 하기 위한 0 패딩.                                                                                                                          |
 
 위에서 나온 `GENESTRT` 테이블과 동일하다.
 
@@ -391,18 +391,18 @@ apk 파일의 `ARCHIVE SEGMENT`와 구조는 동일하다.
 
 
 ## GENESTRT 테이블
-|              명칭              |          자료형           |         크기         | 설명                                                                                                                                                                |
-|:----------------------------:|:----------------------:|:------------------:|:------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|          SIGNATURE           |         char[]         |         8          | 테이블의 시그니처 바이트. 항상 `GENESTRT`이다.                                                                                                                                   |
-|         TABLE SIZE 1         |         uint64         |         8          | 테이블의 첫 16바이트를 제외한 테이블의 크기.                                                                                                                                        |
-|        FILENAME COUNT        |         uint32         |         4          | 파일 이름의 개수로, `FILENAME OFFSET LIST`와 `FILE NAMES`가 포함하는 항목의 개수이다.                                                                                                  |
-|          unknown 1           |         byte[]         |         4          | 알 수 없는 영역.<br>여러 파일에서 `10 00 00 00`이 공통으로 보인다.                                                                                                                    |
-|      FILE NAMES OFFSET       |         uint32         |         4          | 테이블 헤더 다음(`STR OFFSET COUNT`의 오프셋)을 기준으로 `FILE NAMES`가 시작되는 상대적인 오프셋이다.<br>간단히 설명하면, `FILENAME OFFSET LIST PADDING`의 마지막 오프셋에서 `FILENAME COUNT`의 시작 오프셋을 뺀 값이다. |
-|         TABLE SIZE 2         |         uint32         |         4          | `TABLE SIZE 1`과 동일한 값으로 추정.<br>이 필드의 존재 이유는 알 수 없음.                                                                                                               |
-|     FILENAME OFFSET LIST     |        uint32[]        | `FILENAME COUNT` | `FILE NAMES` 영역의 시작점을 기준으로 하는<br>각 문자열(파일명)의 오프셋이다.                                                                                                               |
-| FILENAME OFFSET LIST PADDING |         byte[]         |         n          | `FILENAME OFFSET LIST`의 크기가 16바이트로 나누어 떨어지도록 하기 위한 0 패딩.                                                                                                          |
-|          FILE NAMES          |        string[]        | `FILENAME COUNT` | 각 파일명들이 null로 끝나는 문자열들로 나열되어있다.                                                                                                                                   |
-|       GENESTRT PADDING       |         byte[]         |         n          | 테이블의 전체 크기가 16바이트로 나누어 떨어지도록 하기 위한 0 패딩.                                                                                                                          |
+|              명칭              |   자료형    |         크기         | 설명                                                                                                                                                                |
+|:----------------------------:|:--------:|:------------------:|:------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|          SIGNATURE           |  char[]  |         8          | 테이블의 시그니처 바이트. 항상 `GENESTRT`이다.                                                                                                                                   |
+|         TABLE SIZE 1         |  uint64  |         8          | 테이블의 첫 16바이트를 제외한 테이블의 크기.                                                                                                                                        |
+|        FILENAME COUNT        |  uint32  |         4          | 파일 이름의 개수로, `FILENAME OFFSET LIST`와 `FILE NAMES`가 포함하는 항목의 개수이다.                                                                                                  |
+|          unknown 1           |    -     |         4          | 알 수 없는 영역.<br>여러 파일에서 `10 00 00 00`이 공통으로 보인다.                                                                                                                    |
+|      FILE NAMES OFFSET       |  uint32  |         4          | 테이블 헤더 다음(`STR OFFSET COUNT`의 오프셋)을 기준으로 `FILE NAMES`가 시작되는 상대적인 오프셋이다.<br>간단히 설명하면, `FILENAME OFFSET LIST PADDING`의 마지막 오프셋에서 `FILENAME COUNT`의 시작 오프셋을 뺀 값이다. |
+|         TABLE SIZE 2         |  uint32  |         4          | `TABLE SIZE 1`과 동일한 값으로 추정.<br>이 필드의 존재 이유는 알 수 없음.                                                                                                               |
+|     FILENAME OFFSET LIST     | uint32[] | `FILENAME COUNT` | `FILE NAMES` 영역의 시작점을 기준으로 하는<br>각 문자열(파일명)의 오프셋이다.                                                                                                               |
+| FILENAME OFFSET LIST PADDING |  byte[]  |         n          | `FILENAME OFFSET LIST`의 크기가 16바이트로 나누어 떨어지도록 하기 위한 0 패딩.                                                                                                          |
+|          FILE NAMES          | string[] | `FILENAME COUNT` | 각 파일명들이 null로 끝나는 문자열들로 나열되어있다.                                                                                                                                   |
+|       GENESTRT PADDING       |  byte[]  |         n          | 테이블의 전체 크기가 16바이트로 나누어 떨어지도록 하기 위한 0 패딩.                                                                                                                          |
 
 apk 파일의 `GENESTRT`와 구조는 동일하다.
 
