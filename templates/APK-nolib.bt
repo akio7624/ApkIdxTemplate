@@ -90,13 +90,13 @@ struct FILENAME {
 struct _GENESTRT {
     char SIGNATURE[8] <bgcolor=cLtGreen>;
     uint64 TABLE_SIZE_1 <bgcolor=cLtAqua>;
-    uint32 STR_OFFSET_COUNT <bgcolor=cPurple>;
+    uint32 FILENAME_COUNT <bgcolor=cPurple>;
     byte unknown_1[4] <bgcolor=cLtGray>;
-    uint32 TABLE_SIZE_AND_FILENAME_OFFSET_LIST_SIZE <bgcolor=0xe3cfef>;
+    uint32 FILE_NAMES_OFFSET <bgcolor=0xe3cfef>;
     uint32 TABLE_SIZE_2 <bgcolor=0xb29aea>;
-    uint32 FILENAME_OFFSET_LIST[STR_OFFSET_COUNT] <bgcolor=cLtRed>;
-    byte GENESTRT_PADDING[GetTablePaddingCount()] <bgcolor=cLtAqua>;
-    FILENAME FILE_NAMES[STR_OFFSET_COUNT] <optimize=false, bgcolor=0xddf6d6, read=(fname)>;
+    uint32 FILENAME_OFFSET_LIST[FILENAME_COUNT] <bgcolor=cLtRed>;
+    byte FILENAME_OFFSET_LIST_PADDING[GetTablePaddingCount()] <bgcolor=cLtAqua>;
+    FILENAME FILE_NAMES[FILENAME_COUNT] <optimize=false, bgcolor=0xddf6d6, read=(fname)>;
 };
 
 struct _GENEEOF {
@@ -121,8 +121,9 @@ struct _PACKFSHD {
     uint32 FILE_SEG_SIZE <bgcolor=cLtPurple>;
     uint32 FILE_SEG_COUNT <bgcolor=cPurple>;
     uint32 FILE_SEG_SIZE2 <bgcolor=cLtPurple>;
-    byte unknown_2[16] <bgcolor=cLtGray>;
-    _ARCHIVE_FILE_SEGMENT ARCHIVE_FILE_SEGMENT[FILE_SEG_COUNT] <name="file", comment=Str("Segment for file '%s'", GetArchiveFnameFromNameIdx(parentof(parentof(this)).GENESTRT, this.NAME_IDX))>;
+    uint32 unknown_2 <bgcolor=cLtGray>;
+    byte unknown_3[12] <bgcolor=cLtGray>;
+    _ARCHIVE_FILE_SEGMENT ARCHIVE_FILE_SEGMENT[FILE_SEG_COUNT] <comment=Str("Segment for file '%s'", GetArchiveFnameFromNameIdx(parentof(parentof(this)).GENESTRT, this.NAME_IDX))>;
 };
 
 // ==================================================================================
@@ -250,7 +251,7 @@ byte GENESTRT_PADDING[GetTablePaddingCount()] <bgcolor=cLtAqua>;
 
 _GENEEOF GENEEOF;
 
-byte HEADER_END_PADDING[GetHeaderEndPadding()] <bgcolor=cLtAqua>;
+byte TABLE_END_PADDING[GetHeaderEndPadding()] <bgcolor=cLtAqua>;
 
 struct _FILE_LIST {
     local uint64 FILE_OFFSET, FILE_SIZE, FILE_ZSIZE, real_size, padding_count;

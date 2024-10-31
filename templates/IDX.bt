@@ -129,13 +129,13 @@ struct FILENAME {
 struct _GENESTRT {
     char SIGNATURE[8] <bgcolor=cLtGreen>;
     uint64 TABLE_SIZE_1 <bgcolor=cLtAqua>;
-    uint32 STR_OFFSET_COUNT <bgcolor=cPurple>;
+    uint32 FILENAME_COUNT <bgcolor=cPurple>;
     byte unknown_1[4] <bgcolor=cLtGray>;
-    uint32 TABLE_SIZE_AND_FILENAME_OFFSET_LIST_SIZE <bgcolor=0xe3cfef>;
+    uint32 FILE_NAMES_OFFSET <bgcolor=0xe3cfef>;
     uint32 TABLE_SIZE_2 <bgcolor=0xb29aea>;
-    uint32 FILENAME_OFFSET_LIST[STR_OFFSET_COUNT] <bgcolor=cLtRed>;
-    byte GENESTRT_PADDING[GetTablePaddingCount()] <bgcolor=cLtAqua>;
-    FILENAME FILE_NAMES[STR_OFFSET_COUNT] <optimize=false, bgcolor=0xddf6d6, read=(fname)>;
+    uint32 FILENAME_OFFSET_LIST[FILENAME_COUNT] <bgcolor=cLtRed>;
+    byte FILENAME_OFFSET_LIST_PADDING[GetTablePaddingCount()] <bgcolor=cLtAqua>;
+    FILENAME FILE_NAMES[FILENAME_COUNT] <optimize=false, bgcolor=0xddf6d6, read=(fname)>;
 };
 
 struct _GENEEOF {
