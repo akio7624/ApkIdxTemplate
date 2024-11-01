@@ -45,7 +45,7 @@ This only affects the feature that displays additional file names; it does not i
 
 ---
 
-Update: 2024-10-31
+Update: 2024-11-01
 
 # Internal Structure of APK Files
 I will now provide a detailed explanation of the internal structure of APK files. All information is based on previously analyzed materials and various analyses, and is not official, so it is not guaranteed to be 100% accurate.
@@ -73,7 +73,7 @@ There is also the concept of an archive, where each archive can contain files. I
 |    TABLE SIZE       | uint64      |  8   | The size of the table excluding the first 16 bytes.                |
 |    unknown 1        |     -       |  8   | Unknown area. <br> Commonly seen as `00 00 01 00 00 00 00 00` in various files. |
 | FILE LIST OFFSET    | uint32      |  4   | The offset where the actual file list begins.                       |
-|    unknown 2        |     -       |  4   | Unknown area. <br> Commonly seen as `02 00 00 00` in various files. |
+| ARCHIVE PADDING TYPE | uint32 | 4  | Likely used to specify block size for archive padding.<br>`1 (0x0001)`: Padded to be divisible by 2048.<br>`2 (0x0002)`: Padded to be divisible by 512. |
 |       HASH          | byte[]      | 16   | Almost certainly the MD5 hash checksum of the file, but it is not yet determined which area it hashes. |
 
 Since the size of the table is divisible by 16, no additional padding is required for the table.
@@ -141,7 +141,7 @@ The `TOC SEGMENT` is a segment that contains key information about the files inc
 |:------------------:|:------------:|:----:|:------------------------------------------------------------------------------------------|
 |     SIGNATURE      | char[]       | 8    | Signature bytes of the table. Always `GENEEOF`.<br>Note that a space (0x20) exists at the end.  |
 |      PADDING       | byte[]       | 8    | 0 padding to ensure that the total size of the table is a multiple of 16 bytes.<br>Since `SIGNATURE` is always 8 characters, the padding is also always 8 bytes. |
-| TABLE END PADDING  | byte[]       | n    | It is presumed that padding is applied to ensure that the size from the beginning of the file, including `TABLE END PADDING`, is a multiple of `2048`, but this is not confirmed. |
+| TABLE END PADDING  | byte[]       | n    | It is assumed that padding is applied so that the total size from the beginning of the file, including `TABLE END PADDING`, is divisible by `2048`. This block size is independent of the `ARCHIVE PADDING TYPE` in `PACKHEDR`. |
 
 
 ## ROOT Files and Archive Area
@@ -169,6 +169,16 @@ Let's take an example. Assume the size of the file to be added is 2752 bytes.
 * $(512 \times 7) - 1 = 3583$. This size can hold the file, but since the smaller value of 3071 exists, there's no need to calculate further.
 
 The block size is determined to be 3071 bytes. The padding size becomes $3071 - 2752 = 319$ bytes. After adding this file, it will be padded with 319 bytes of `0`s at the end, and then the next file will be listed in the same manner.
+
+
+### Padding for Entire ROOT Files (ROOT FILES PADDING)
+
+If there are ROOT files listed, followed by archives, padding must be added between the ROOT files and the archives.
+
+This padding is assumed to be applied so that the combined size of all ROOT files and any existing padding is divisible by 2048.
+
+If only ROOT files are listed and the file ends, or if there are no ROOT files at all (specifically, when the SIZE of all ROOT files is 0), padding may not be necessary. In some cases, even when ROOT files exist but have a size of 0, no padding is added.
+
 
 ### Listing of Archives and Structure of Archives
 Once all ROOT files are listed, it's time to list the archives. If the value of `ARCHIVE SEG SIZE` in the `PACKFSLS` table is 0, it means that archives are not included, so this step can be skipped.
@@ -265,12 +275,12 @@ Naturally, it is padded with `0`s.
 
 ### Archive Padding
 
-This part is also important.  
-The archive itself also requires padding.  
-The padding method for the archive is the same as that of the ROOT file.
+This part is also important.
+The archive itself also requires padding.
 
-Padding should be applied according to the formula $(512 \times n) - 1$ described above.  
-This is why it was previously stated that the archive is a type of ROOT file.
+The padding size varies depending on the `ARCHIVE PADDING TYPE` in `PACKHEDR`.
+* If `ARCHIVE PADDING TYPE` is `1`, the block size for padding is calculated as $(2048 \times n) - 1$.
+* If `ARCHIVE PADDING TYPE` is `2`, the block size for padding is calculated as $(512 \times n) - 1$<br>(the same padding method used for ROOT files).
 
 The important point is that if there are more archives following, padding should be applied; however, if the current archive is the last one, **no padding is applied**.
 
@@ -312,7 +322,7 @@ This is identical to the `ENDILTLE` table in the APK file.
 |    TABLE SIZE     | uint64 | 8  | The size of the table excluding the first 16 bytes.                                |
 |    unknown 1      |   -    | 8  | An unknown area.<br>Several files commonly show `00 00 01 00 00 00 00 00`.      |
 | FILE LIST OFFSET   | uint32 | 4  | The offset where the actual file listing begins.                                  |
-|    unknown 2      |   -    | 4  | An unknown area.<br>Several files commonly show `02 00 00 00`.                  |
+| ARCHIVE PADDING TYPE | uint32 | 4  | Likely used to specify block size for archive padding.<br>`1 (0x0001)`: Padded to be divisible by 2048.<br>`2 (0x0002)`: Padded to be divisible by 512. |
 |       HASH        | byte[] | 16 | It is almost certain that this is the MD5 hash checksum of the file, but it is still unclear which area is being hashed. |
 
 The structure of this table is the same as the `PACKHEDR` table in the APK file.
