@@ -3,13 +3,14 @@
 //
 //      File: APK.bt
 //   Authors: akio7624
-//   Version: 1.0
+//   Version: 1.1
 //   Purpose: Parse APK archives found in some console games (not Android APKs)
 //  Category: Game
 // File Mask: *.apk
 //  ID Bytes: 45 4E 44 49 4C 54 4C 45  // ENDILTLE
 //   History: 
 //   1.0   2024-10-31 Initial release
+//   1.1   2024-11-01 Newly identified items have been incorporated
 //
 //------------------------------------------------
 //
