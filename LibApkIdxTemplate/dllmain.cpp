@@ -41,4 +41,5 @@ DECL_EXPORT int GetArchiveFileNameIdxFromOffset(int offset) {
 
 DECL_EXPORT void ClearArchiveFileOffsetAndNameIdx() {
 	OFFSET_NAME_IDX_MAP_2.clear();
+	OFFSET_NAME_IDX_MAP_2 = unordered_map<int, int>();  // Without this line, building with compiler optimization (/Ox) causes a crash in 010 Editor.
 }
