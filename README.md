@@ -90,17 +90,31 @@ Since the size of the table is divisible by 16, no additional padding is require
 |     PADDING         |      byte[]       |       n       | Zero padding to ensure the total size of the table is a multiple of 16 bytes.                     |
 
 ### TOC SEGMENT
-|     Name      |  Data Type   | Size | Description                                                                                               |
-|:-------------:|:------------:|:----:|:----------------------------------------------------------------------------------------------------------|
-| IDENTIFIER    | uint32       |  4   | Indicates the type of the file. <br> `0 (0x0000)`: File stored uncompressed. <br> `1 (0x0001)`: Presumed to be a folder. <br> `512 (0x0200)`: File stored compressed with zlib. |
-|  NAME_IDX     | uint32       |  4   | Index in the `FILE NAMES` array of the subsequent `GENESTRT` table. <br> This index can be used to retrieve the name of the file. |
-|    ZERO       | byte[]       |  8   | Area filled with 8 bytes of `0`. <br> The reason for this is unknown.                                   |
-| FILE OFFSET   | uint64       |  8   | Starting point of the actual data for the file represented by the segment. <br> The offset is relative to the beginning of the file. |
-|  FILE SIZE    | uint64       |  8   | Size of the uncompressed file (in bytes). <br> If `IDENTIFIER` is `1`, this value is `0`.                 |
-| FILE ZSIZE    | uint64       |  8   | Size of the compressed file (in bytes). <br> If it is an uncompressed file (`IDENTIFIER` is `0`), this value is `0`. |
+|     Name      |  Data Type   | Size | Description                                                                                                                                                       |
+|:-------------:|:------------:|:----:|:------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| IDENTIFIER    | uint32       |  4   | Indicates the type of the file. <br> `0 (0x0000)`: File stored uncompressed. <br> `1 (0x0001)`: Directory. <br> `512 (0x0200)`: File stored compressed with zlib. |
+|  NAME_IDX     | uint32       |  4   | Index in the `FILE NAMES` array of the subsequent `GENESTRT` table. <br> This index can be used to retrieve the name of the file.                                 |
+|    ZERO       | byte[]       |  8   | Area filled with 8 bytes of `0`. <br> The reason for this is unknown.                                                                                             |
+| FILE OFFSET   | uint64       |  8   | Starting point of the actual data for the file represented by the segment. <br> The offset is relative to the beginning of the file.                              |
+|  FILE SIZE    | uint64       |  8   | Size of the uncompressed file (in bytes). <br> If `IDENTIFIER` is `1`, this value is `0`.                                                                         |
+| FILE ZSIZE    | uint64       |  8   | Size of the compressed file (in bytes). <br> If it is an uncompressed file (`IDENTIFIER` is `0`), this value is `0`.                                              |
 
 The `TOC SEGMENT` is a segment that contains key information about the files included in the APK.
 
+Entries within the same folder are listed consecutively in order.
+
+#### For Directories
+
+|      Name       |   Type   | Size | Description                                                                                       |
+|:---------------:|:--------:|:----:|:--------------------------------------------------------------------------------------------------|
+| ENTRY INDEX     | uint32   |  4   | Starting index in the `TOC SEGMENT` list for items contained in the folder represented by the current segment. |
+| ENTRY COUNT     | uint32   |  4   | Number of items contained in the folder, starting from the segment indicated by `ENTRY INDEX`.   |
+
+When `IDENTIFIER` is `1`, indicating a directory, the bytes corresponding to `FILE_OFFSET` should be interpreted as shown in the table above.
+
+This represents information about folders and files within the current segment.
+Specifically, starting from the segment at `ENTRY INDEX` in the `TOC SEGMENT LIST`, `ENTRY COUNT` items are included in the folder.
+This implies that entries within the same folder must be listed consecutively.
 
 ## PACKFSLS Table
 |          Name          |        Data Type        |        Size         | Description                                                                              |
@@ -383,3 +397,29 @@ The structure is identical to the `PACKFSLS` in the apk file.
 |      HASH        | byte[]  |  16  | The MD5 hash value of the entire archive excluding padding.                       |
 
 The structure is identical to the `ARCHIVE SEGMENT` in the apk file.
+
+
+## GENESTRT Table
+|        Name         |   Type    |    Size    | Description                                                                                                                            |
+|:-------------------:|:---------:|:----------:|:---------------------------------------------------------------------------------------------------------------------------------------|
+|      SIGNATURE      |  char[]   |      8     | Signature bytes of the table. Always `GENESTRT`.                                                                                       |
+|    TABLE SIZE 1     |  uint64   |      8     | Size of the table excluding the first 16 bytes.                                                                                        |
+|   FILENAME COUNT    |  uint32   |      4     | Number of file names, representing the number of entries in `FILENAME OFFSET LIST` and `FILE NAMES`.                                   |
+|      unknown 1      |     -     |      4     | Unknown field. `10 00 00 00` is commonly seen across multiple files.                                                                   |
+|  FILE NAMES OFFSET  |  uint32   |      4     | Relative offset where `FILE NAMES` starts, based on the beginning of `STR OFFSET COUNT`.<br>Simply put, it’s the last offset in `FILENAME OFFSET LIST PADDING` minus the starting offset of `FILENAME COUNT`. |
+|    TABLE SIZE 2     |  uint32   |      4     | Presumably the same value as `TABLE SIZE 1`.<br>The purpose of this field is unknown.                                                  |
+| FILENAME OFFSET LIST | uint32[] | `FILENAME COUNT` | Offsets for each string (file name), relative to the start of `FILE NAMES`.                                                            |
+|FILENAME OFFSET LIST PADDING | byte[] |      n     | Zero padding to make the size of `FILENAME OFFSET LIST` a multiple of 16 bytes.                                                        |
+|     FILE NAMES      | string[] | `FILENAME COUNT` | List of file names as null-terminated strings.                                                                                         |
+|    GENESTRT PADDING |  byte[]  |      n     | Zero padding to make the total table size a multiple of 16 bytes.                                                                      |
+
+The structure is the same as the `GENESTRT` table in the APK file.
+
+
+## GENEEOF Table
+|      Name      |  Type   | Size | Description                                                                                                   |
+|:--------------:|:-------:|:----:|:--------------------------------------------------------------------------------------------------------------|
+|   SIGNATURE    | char[]  |  8   | Signature bytes of the table. Always `GENEEOF `. Note the space (0x20) at the end.                            |
+|    PADDING     | byte[]  |  8   | Zero padding to make the table size a multiple of 16 bytes. Since `SIGNATURE` is always 8 characters, the padding is always 8 bytes as well. |
+
+Except for the lack of final padding, the structure is the same as the `GENEEOF` table in the APK file.
