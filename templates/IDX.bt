@@ -3,7 +3,7 @@
 //
 //      File: IDX.bt
 //   Authors: akio7624
-//   Version: 1.1
+//   Version: 1.2
 //   Purpose: Parsing idx files found alongside apk archive files in some console games.
 //  Category: Game
 // File Mask: *.idx
@@ -11,6 +11,7 @@
 //   History: 
 //   1.0   2024-10-31 Initial release
 //   1.1   2024-11-01 Newly identified items have been incorporated
+//   1.2   2024-11-01 Modify segment structure if IDENTIFIER in TOC_SEGMENT is 1 (indicates a directory).
 //
 //------------------------------------------------
 //
@@ -103,7 +104,12 @@ struct _TOC_SEGMENT {
     uint32 IDENTIFIER <fgcolor=cWhite, bgcolor=cDkPurple, comment=MakeTocIdentifierComment(this)>;
     uint32 NAME_IDX <bgcolor=0x8d917a, comment=GetFnameFromNameIdx(this)>;
     byte ZERO[8] <bgcolor=0xa7b193>;
-    uint64 FILE_OFFSET <format=hex, bgcolor=0xa2c299>;
+    if(IDENTIFIER == 1) {
+        uint32 ENTRY_INDEX <format=hex, bgcolor=0xf09dcb, format=decimal>;
+        uint32 ENTRY_COUNT <format=hex, bgcolor=0xe1c1f0, format=decimal>;
+    }else {
+        uint64 FILE_OFFSET <format=hex, bgcolor=0xa2c299>;
+    }
     uint64 FILE_SIZE <bgcolor=0x97d1ad>;
     uint64 FILE_ZSIZE <bgcolor=0xb8fedb>;
 };
@@ -114,7 +120,7 @@ struct _PACKTOC {
     uint32 TOC_SEG_SIZE <bgcolor=cLtPurple>;
     uint32 TOC_SEG_COUNT <bgcolor=cPurple>;
     byte unknown_1[8] <bgcolor=cLtGray>;
-    _TOC_SEGMENT TOC_SEGMENT_LIST[TOC_SEG_COUNT] <comment=Str("Segment for file '%s'", GetFnameFromNameIdx(this.NAME_IDX))>;
+    _TOC_SEGMENT TOC_SEGMENT_LIST[TOC_SEG_COUNT] <comment=Str("Segment for file '%s'", GetFnameFromNameIdx(this.NAME_IDX)), optimize=false>;
 };
 
 struct _ARCHIVE_SEGMENT {

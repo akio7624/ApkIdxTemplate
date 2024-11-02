@@ -3,7 +3,7 @@
 //
 //      File: APK.bt
 //   Authors: akio7624
-//   Version: 1.1
+//   Version: 1.2
 //   Purpose: Parse APK archives found in some console games (not Android APKs)
 //  Category: Game
 // File Mask: *.apk
@@ -11,6 +11,7 @@
 //   History: 
 //   1.0   2024-10-31 Initial release
 //   1.1   2024-11-01 Newly identified items have been incorporated
+//   1.2   2024-11-01 Modify segment structure if IDENTIFIER in TOC_SEGMENT is 1 (indicates a directory).
 //
 //------------------------------------------------
 //
@@ -65,7 +66,12 @@ struct _TOC_SEGMENT {
     uint32 IDENTIFIER <fgcolor=cWhite, bgcolor=cDkPurple, comment=MakeTocIdentifierComment(this)>;
     uint32 NAME_IDX <bgcolor=0x8d917a, comment=GetFnameFromNameIdx(this)>;
     byte ZERO[8] <bgcolor=0xa7b193>;
-    uint64 FILE_OFFSET <format=hex, bgcolor=0xa2c299>;
+    if(IDENTIFIER == 1) {
+        uint32 ENTRY_INDEX <format=hex, bgcolor=0xf09dcb, format=decimal>;
+        uint32 ENTRY_COUNT <format=hex, bgcolor=0xe1c1f0, format=decimal>;
+    }else {
+        uint64 FILE_OFFSET <format=hex, bgcolor=0xa2c299>;
+    }
     uint64 FILE_SIZE <bgcolor=0x97d1ad>;
     uint64 FILE_ZSIZE <bgcolor=0xb8fedb>;
 };
@@ -76,7 +82,7 @@ struct _PACKTOC {
     uint32 TOC_SEG_SIZE <bgcolor=cLtPurple>;
     uint32 TOC_SEG_COUNT <bgcolor=cPurple>;
     byte unknown_1[8] <bgcolor=cLtGray>;
-    _TOC_SEGMENT TOC_SEGMENT_LIST[TOC_SEG_COUNT] <comment=Str("Segment for file '%s'", GetFnameFromNameIdx(this.NAME_IDX))>;
+    _TOC_SEGMENT TOC_SEGMENT_LIST[TOC_SEG_COUNT] <comment=Str("Segment for '%s'", GetFnameFromNameIdx(this.NAME_IDX)), optimize=false>;
 };
 
 struct _ARCHIVE_SEGMENT {
@@ -248,7 +254,7 @@ string MakeTocIdentifierComment(uint32 identifier) {
     if(identifier == 0) {
         return "Uncompressed file (raw)";
     }else if(identifier == 1) {
-        return "Assumed to be a directory";
+        return "Directory";
     }else if(identifier == 512) {
         return "File compressed with zlib.";
     }else{
@@ -323,6 +329,7 @@ Assert(Strcmp(PACKTOC.SIGNATURE, "PACKTOC ") == 0, "The signature of the `PACKTO
 byte PACKTOC_PADDING[GetTablePaddingCount()] <bgcolor=cLtAqua>;
 
 for(i=0; i<PACKTOC.TOC_SEG_COUNT; i++) {
+    if (PACKTOC.TOC_SEGMENT_LIST[i].IDENTIFIER == 1) { continue; }
     AddRootFileOffsetAndNameIdx(PACKTOC.TOC_SEGMENT_LIST[i].FILE_OFFSET, PACKTOC.TOC_SEGMENT_LIST[i].NAME_IDX);
 }
 
@@ -345,6 +352,8 @@ struct _FILE_LIST {
     local uint64 FILE_OFFSET, FILE_SIZE, FILE_ZSIZE, real_size, padding_count;
     
     for(i=0; i<PACKTOC.TOC_SEG_COUNT; i++) {
+        if (PACKTOC.TOC_SEGMENT_LIST[i].IDENTIFIER == 1) { continue; }
+        
         FILE_OFFSET = PACKTOC.TOC_SEGMENT_LIST[i].FILE_OFFSET;
         FILE_SIZE = PACKTOC.TOC_SEGMENT_LIST[i].FILE_SIZE;
         FILE_ZSIZE = PACKTOC.TOC_SEGMENT_LIST[i].FILE_ZSIZE;
