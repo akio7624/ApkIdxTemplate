@@ -9,7 +9,7 @@
 // File Mask: *.apk
 //  ID Bytes: 45 4E 44 49 4C 54 4C 45  // ENDILTLE
 //   History: 
-//   1.0   2024-11-01 Initial release
+//   1.0   2024-10-31 Initial release
 //
 //------------------------------------------------
 //
@@ -26,6 +26,7 @@
 // 
 // table header: cLtGreen
 // table padding, size: cLtAqua
+// ROOT files padding: cDkAqua
 // archive padding: cAqua
 // unknown: cLtGray
 // hash, zero: cSilver
@@ -55,7 +56,7 @@ struct _PACKHEDR {
     uint64 TABLE_SIZE <bgcolor=cLtAqua>;
     byte unknown_1[8] <bgcolor=cLtGray>;
     uint32 FILE_LIST_OFFSET <format=hex, bgcolor=cLtRed>;
-    byte unknown_2[4] <bgcolor=cLtGray>;
+    uint32 ARCHIVE_PADDING_TYPE <bgcolor=cLtPurple, comment=MakeArchivePaddingTypeComment(this)>;
     byte HASH[16] <format=hex, bgcolor=cSilver>;
 };
 
@@ -90,8 +91,7 @@ struct _PACKFSLS {
     uint64 TABLE_SIZE <bgcolor=cLtAqua>;
     uint32 ARCHIVE_SEG_COUNT <bgcolor=cPurple>;
     uint32 ARCHIVE_SEG_SIZE <bgcolor=cLtPurple>;
-    byte unknown_1[4] <bgcolor=cLtGray>;
-    byte unknown_2[4] <bgcolor=cLtGray>;
+    byte unknown_1[8] <bgcolor=cLtGray>;
     _ARCHIVE_SEGMENT ARCHIVE_SEGMENT_LIST[ARCHIVE_SEG_COUNT] <comment=Str("Segment for archive '%s'", GetFnameFromNameIdx(this.NAME_IDX))>;
 };
 
@@ -106,9 +106,9 @@ struct _GENESTRT {
     byte unknown_1[4] <bgcolor=cLtGray>;
     uint32 FILE_NAMES_OFFSET <bgcolor=0xe3cfef>;
     uint32 TABLE_SIZE_2 <bgcolor=0xb29aea>;
-    uint32 FILENAME_OFFSET_LIST[STR_OFFSET_COUNT] <bgcolor=cLtRed>;
+    uint32 FILENAME_OFFSET_LIST[FILENAME_COUNT] <bgcolor=cLtRed>;
     byte FILENAME_OFFSET_LIST_PADDING[GetTablePaddingCount()] <bgcolor=cLtAqua>;
-    FILENAME FILE_NAMES[STR_OFFSET_COUNT] <optimize=false, bgcolor=0xddf6d6, read=(fname)>;
+    FILENAME FILE_NAMES[FILENAME_COUNT] <optimize=false, bgcolor=0xddf6d6, read=(fname)>;
 };
 
 struct _GENEEOF {
@@ -154,17 +154,47 @@ uint64 GetTablePaddingCount() {
 }
 
 
-// Pad the area between the header table of the file and the section where the root files are listed with 00.
+// Padding the file from the beginning to be a multiple of 2048, including TABLE END PADDING.
 uint64 GetHeaderEndPadding() {
-    local uint64 root_start_offset = PACKHEDR.FILE_LIST_OFFSET;
-    local uint64 current = FTell();
+    local uint64 size = FTell();
     
-    return root_start_offset - current;
+    if(size % 2048 == 0) { return 0; }
+    
+    local uint64 n = (size / 2048);
+    local int64 block_size = 0;
+    
+    while(true){
+        block_size = (n * 2048);
+        if(size <= block_size) {
+            return block_size - size;
+        }
+        
+        n++;
+    }
+}
+
+
+// Calculate the amount of padding needed to ensure that the sum of the sizes of the ROOT files
+// and ROOT_FILES_PADDING is a multiple of 2048.
+uint64 GetRootFilesPadding(uint64 size) {
+    if(size % 2048 == 0) { return 0; }
+    
+    local uint64 n = (size / 2048);
+    local int64 block_size = 0;
+    
+    while(true){
+        block_size = (n * 2048);
+        if(size <= block_size) {
+            return block_size - size;
+        }
+        
+        n++;
+    }
 }
 
 
 // Receive the unpadded size of a root file or archive, then calculate and return the size including padding.
-int64 GetRootFileBlockSize(uint64 size) {
+uint64 GetRootFileBlockSize(uint64 size) {
     if(size % 512 == 0) { return size; }
     
     local uint64 n = (size / 512);
@@ -172,6 +202,26 @@ int64 GetRootFileBlockSize(uint64 size) {
     
     while(true){
         block_size = (n * 512);
+        if(size <= block_size) {
+            return block_size;
+        }
+        
+        n++;
+    }
+}
+
+
+// Calculate the block size of the archive based on the value of ARCHIVE_PADDING_TYPE.
+uint64 GetArchiveBlockSize(uint64 size) {
+    local int UNIT = (PACKHEDR.ARCHIVE_PADDING_TYPE == 1) ? 2048 : 512;
+    
+    if(size % UNIT == 0) { return size; }
+    
+    local uint64 n = (size / UNIT);
+    local int64 block_size = 0;
+    
+    while(true){
+        block_size = (n * UNIT);
         if(size <= block_size) {
             return block_size;
         }
@@ -239,6 +289,18 @@ string GetArchiveFnameFromNameIdx(_GENESTRT &genestrt, uint32 name_idx) {
         return fname;
     }
 }
+
+
+// Comment on ARCHIVE_PADDING_TYPE.
+string MakeArchivePaddingTypeComment(uint32 typ) {
+    if(typ == 1) {
+        return "Pad the archive to 2048 bytes.";
+    }else if(typ == 2) {
+        return "Pad the archive to 512 bytes.";
+    }else{
+        return Str("%d is an unknown ARCHIVE PADDING TYPE. Please report it.", typ);
+    }
+}
 // ==================================================================================
 
 
@@ -250,9 +312,13 @@ local int i = 0;
 LittleEndian();  // Use Little Endian
 
 _ENDILTLE ENDILTLE;
+Assert(Strcmp(ENDILTLE.SIGNATURE, "ENDILTLE") == 0, "The signature of the `ENDILTLE` table must be 'ENDILTLE'.");
+
 _PACKHEDR PACKHEDR;
+Assert(Strcmp(PACKHEDR.SIGNATURE, "PACKHEDR") == 0, "The signature of the `PACKHEDR` table must be 'PACKHEDR'.");
 
 _PACKTOC PACKTOC;
+Assert(Strcmp(PACKTOC.SIGNATURE, "PACKTOC ") == 0, "The signature of the `PACKTOC` table must be 'PACKTOC '.");
 byte PACKTOC_PADDING[GetTablePaddingCount()] <bgcolor=cLtAqua>;
 
 for(i=0; i<PACKTOC.TOC_SEG_COUNT; i++) {
@@ -260,15 +326,20 @@ for(i=0; i<PACKTOC.TOC_SEG_COUNT; i++) {
 }
 
 _PACKFSLS PACKFSLS;
+Assert(Strcmp(PACKFSLS.SIGNATURE, "PACKFSLS") == 0, "The signature of the `PACKFSLS` table must be 'PACKFSLS'.");
 byte PACKFSLS_PADDING[GetTablePaddingCount()] <bgcolor=cLtAqua>;
 
 _GENESTRT GENESTRT;
+Assert(Strcmp(GENESTRT.SIGNATURE, "GENESTRT") == 0, "The signature of the `GENESTRT` table must be 'GENESTRT'.");
 byte GENESTRT_PADDING[GetTablePaddingCount()] <bgcolor=cLtAqua>;
 
 _GENEEOF GENEEOF;
+Assert(Strcmp(GENEEOF.SIGNATURE, "GENEEOF ") == 0, "The signature of the `GENEEOF` table must be 'GENEEOF '.");
 
 byte TABLE_END_PADDING[GetHeaderEndPadding()] <bgcolor=cLtAqua>;
 
+local uint64 root_files_size = 0;
+local uint64 last_root_file[3] = {0, 0, 0}; // offset size, padding_count
 struct _FILE_LIST {
     local uint64 FILE_OFFSET, FILE_SIZE, FILE_ZSIZE, real_size, padding_count;
     
@@ -280,9 +351,17 @@ struct _FILE_LIST {
         
         if(real_size == 0) continue;
         
+        root_files_size += real_size;
+
         FSeek(FILE_OFFSET);
     
         padding_count = GetRootFileBlockSize(real_size) - real_size;
+        
+        if(last_root_file[0] < FILE_OFFSET) {  // The TOC SEGMENT may not be aligned according to the file offset.
+            last_root_file[0] = FILE_OFFSET;
+            last_root_file[1] = real_size;
+            last_root_file[2] = padding_count;
+        }
         
         struct _FILE{
             local uint32 name_idx = GetRootFileNameIdxFromOffset(FTell());
@@ -293,6 +372,13 @@ struct _FILE_LIST {
         } file <comment=(name_idx == -1 ? "(cannot get file name)" : GENESTRT.FILE_NAMES[name_idx].fname)>;
     }
 } ROOT_FILES;
+
+
+if(PACKFSLS.ARCHIVE_SEG_COUNT != 0 && root_files_size != 0) {
+    FSeek(last_root_file[0] + last_root_file[1] + last_root_file[2]);  // go to end of ROOT files
+    root_files_size = FTell() - PACKHEDR.FILE_LIST_OFFSET;
+    byte ROOT_FILES_PADDING[GetRootFilesPadding(root_files_size)] <bgcolor=cDkAqua>;
+}
 
 
 local uint32 NAME_IDX;
@@ -309,8 +395,10 @@ for(i=0; i<PACKFSLS.ARCHIVE_SEG_COUNT; i++) {
     struct _ARCHIVE {
         local int j = 0;
         _ENDILTLE ENDILTLE;
+        Assert(Strcmp(ENDILTLE.SIGNATURE, "ENDILTLE") == 0, "The signature of the `ENDILTLE` table must be 'ENDILTLE'.");
         
         _PACKFSHD PACKFSHD;
+        Assert(Strcmp(PACKFSHD.SIGNATURE, "PACKFSHD") == 0, "The signature of the `PACKFSHD` table must be 'PACKFSHD'.");
         byte PACKFSHD_PADDING[GetTablePaddingCount()] <bgcolor=cLtAqua>;
         
         for(j=0; j<PACKFSHD.FILE_SEG_COUNT; j++) {
@@ -318,6 +406,7 @@ for(i=0; i<PACKFSLS.ARCHIVE_SEG_COUNT; i++) {
         }
 
         _GENESTRT GENESTRT;
+        Assert(Strcmp(GENESTRT.SIGNATURE, "GENESTRT") == 0, "The signature of the `GENESTRT` table must be 'GENESTRT'.");
         byte GENESTRT_PADDING[GetTablePaddingCount()] <bgcolor=cLtAqua>;
         
         _GENEEOF GENEEOF;

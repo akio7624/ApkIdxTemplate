@@ -9,7 +9,7 @@
 // File Mask: *.idx
 //  ID Bytes: 45 4E 44 49 4C 54 4C 45  // ENDILTLE
 //   History: 
-//   1.0   2024-11-01 Initial release
+//   1.0   2024-10-31 Initial release
 //
 //------------------------------------------------
 //
@@ -67,6 +67,18 @@ string MakeTocIdentifierComment(uint32 identifier) {
     }
 }
 
+
+// Comment on ARCHIVE_PADDING_TYPE.
+string MakeArchivePaddingTypeComment(uint32 typ) {
+    if(typ == 1) {
+        return "Pad the archive to 2048 bytes.";
+    }else if(typ == 2) {
+        return "Pad the archive to 512 bytes.";
+    }else{
+        return Str("%d is an unknown ARCHIVE PADDING TYPE. Please report it.", typ);
+    }
+}
+
 // ==================================================================================
 
 
@@ -82,7 +94,7 @@ struct _PACKHEDR {
     uint64 TABLE_SIZE <bgcolor=cLtAqua>;
     byte unknown_1[8] <bgcolor=cLtGray>;
     uint32 FILE_LIST_OFFSET <format=hex, bgcolor=cLtRed>;
-    byte unknown_2[4] <bgcolor=cLtGray>;
+    uint32 ARCHIVE_PADDING_TYPE <bgcolor=cLtPurple, comment=MakeArchivePaddingTypeComment(this)>;
     byte HASH[16] <format=hex, bgcolor=cSilver>;
 };
 
@@ -117,8 +129,7 @@ struct _PACKFSLS {
     uint64 TABLE_SIZE <bgcolor=cLtAqua>;
     uint32 ARCHIVE_SEG_COUNT <bgcolor=cPurple>;
     uint32 ARCHIVE_SEG_SIZE <bgcolor=cLtPurple>;
-    byte unknown_1[4] <bgcolor=cLtGray>;
-    byte unknown_2[4] <bgcolor=cLtGray>;
+    byte unknown_1[8] <bgcolor=cLtGray>;
     _ARCHIVE_SEGMENT ARCHIVE_SEGMENT_LIST[ARCHIVE_SEG_COUNT] <comment=Str("Segment for archive '%s'", GetFnameFromNameIdx(this.NAME_IDX))>;
 };
 
