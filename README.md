@@ -71,7 +71,8 @@ There is also the concept of an archive, where each archive can contain files. I
 |:-------------------:|:-----------:|:----:|:-------------------------------------------------------------------|
 |    SIGNATURE        | char[]      |  8   | The signature bytes of the table. Always `PACKHEDR`.               |
 |    TABLE SIZE       | uint64      |  8   | The size of the table excluding the first 16 bytes.                |
-|    unknown 1        |     -       |  8   | Unknown area. <br> Commonly seen as `00 00 01 00 00 00 00 00` in various files. |
+|      unknown 1       |   -    | 4  | Unknown area. <br> Commonly seen as `00 00 01 00` in various files.                                             |
+|      NAME_IDX       |   uint32    | 4  | NAME_IDX of the name of the apk file.<br>Normally in the form of `xxx/yyy.apk`.                                             |
 | FILE LIST OFFSET    | uint32      |  4   | The offset where the actual file list begins.                       |
 | ARCHIVE PADDING TYPE | uint32 | 4  | Likely used to specify block size for archive padding.<br>`1 (0x0001)`: Padded to be divisible by 2048.<br>`2 (0x0002)`: Padded to be divisible by 512. |
 |       HASH          | byte[]      | 16   | Almost certainly the MD5 hash checksum of the file, but it is not yet determined which area it hashes. |
@@ -131,7 +132,7 @@ This implies that entries within the same folder must be listed consecutively.
 |       Name       |  Data Type   | Size | Description                                                                          |
 |:---------------:|:------------:|:----:|:----------------------------------------------------------------------------------|
 |    NAME IDX     | uint32       | 4    | Index in the `GENESTRT` table’s `FILE NAMES` array for each archive.<br>This index can be used to retrieve the file name. |
-|      ZERO       | byte[]      | 4    | Area filled with 4 bytes of `0`.<br>The reason for this structure is unknown.      |
+|      unknown_1      | uint32 | 4  |  An area filled with `0` bytes of 4 bytes long.<br>idx file appears as `1`.                           |
 | ARCHIVE OFFSET   | uint64       | 8    | The starting point of where the archive actually resides in the file.<br>The offset is based on the beginning of the file. |
 |  ARCHIVE SIZE   | uint64       | 8    | Actual size of the archive excluding padding (in bytes).                          |
 |      HASH       | byte[]      | 16   | MD5 hash of the entire archive excluding padding.                                  |
@@ -251,7 +252,7 @@ This is similar to the `PACKTOC` table mentioned above.
 |         TABLE SIZE 1         |  uint64  |         8          | The size of the table excluding the first 16 bytes.                                                                                                                                         |
 |        FILENAME COUNT        |  uint32  |         4          | The number of file names, which is the count of items contained in `FILENAME OFFSET LIST` and `FILE NAMES`.                                                                                                 |
 |          unknown 1           |    -     |         4          | Unknown area.<br>Commonly observed as `10 00 00 00` in multiple files.                                                                                                                                   |
-|      FILE NAMES OFFSET       |  uint32  |         4          | A relative offset indicating where `FILE NAMES` starts, based on the header of the table (offset after `STR OFFSET COUNT`).<br>In simple terms, it is the difference between the last offset of `FILENAME OFFSET LIST PADDING` and the starting offset of `FILENAME COUNT`. |
+|      FILE NAMES OFFSET       |  uint32  |         4          | A relative offset indicating where `FILE NAMES` starts, based on the header of the table (offset after `FILENAME COUNT`).<br>In simple terms, it is the difference between the last offset of `FILENAME OFFSET LIST PADDING` and the starting offset of `FILENAME COUNT`. |
 |         TABLE SIZE 2         |  uint32  |         4          | Presumed to be the same value as `TABLE SIZE 1`.<br>The reason for the existence of this field is unknown.                                                                                                               |
 |     FILENAME OFFSET LIST     | uint32[] | `FILENAME COUNT` | An array of offsets for each string (file name) based on the starting point of the `FILE NAMES` area.                                                                                                        |
 | FILENAME OFFSET LIST PADDING |  byte[]  |         n          | Zero padding to ensure that the size of `FILENAME OFFSET LIST` is divisible by 16 bytes.                                                                                                                  |
@@ -334,7 +335,8 @@ This is identical to the `ENDILTLE` table in the APK file.
 |:-----------------:|:------:|:--:|:------------------------------------------------------------------------|
 |    SIGNATURE      | char[] | 8  | The signature bytes of the table. Always `PACKHEDR`.                                   |
 |    TABLE SIZE     | uint64 | 8  | The size of the table excluding the first 16 bytes.                                |
-|    unknown 1      |   -    | 8  | An unknown area.<br>Several files commonly show `00 00 01 00 00 00 00 00`.      |
+|      unknown 1       |   -    | 4  | Unknown area. <br> Commonly seen as `00 00 01 00` in various files.                                             |
+|      NAME_IDX       |   uint32    | 4  | NAME_IDX of the name of the apk file.<br>Normally in the form of `xxx/yyy.apk`.                                             |
 | FILE LIST OFFSET   | uint32 | 4  | The offset where the actual file listing begins.                                  |
 | ARCHIVE PADDING TYPE | uint32 | 4  | Likely used to specify block size for archive padding.<br>`1 (0x0001)`: Padded to be divisible by 2048.<br>`2 (0x0002)`: Padded to be divisible by 512. |
 |       HASH        | byte[] | 16 | It is almost certain that this is the MD5 hash checksum of the file, but it is still unclear which area is being hashed. |
@@ -391,7 +393,7 @@ The structure is identical to the `PACKFSLS` in the apk file.
 |       Name       |  Type   | Size | Description                                                                         |
 |:----------------:|:-------:|:-----|:-----------------------------------------------------------------------------------|
 |    NAME IDX      | uint32  |  4   | An index of the `FILE NAMES` array in the `GENESTRT` table included in each archive. This index can be used to retrieve the file name. |
-|      ZERO        | byte[]  |  4   | An area filled with 4 bytes of `0`. The reason for this is unknown.              |
+|      unknown_1      | uint32 | 4  |  An area filled with `0` bytes of 4 bytes long.<br>idx file appears as `1`.                           |
 | ARCHIVE OFFSET    | uint64  |  8   | The starting point of the area where the archive is actually located in the file. The offset is relative to the beginning of the file. |
 |  ARCHIVE SIZE    | uint64  |  8   | The actual size of the archive (in bytes) excluding padding.                     |
 |      HASH        | byte[]  |  16  | The MD5 hash value of the entire archive excluding padding.                       |
@@ -406,7 +408,7 @@ The structure is identical to the `ARCHIVE SEGMENT` in the apk file.
 |    TABLE SIZE 1     |  uint64   |      8     | Size of the table excluding the first 16 bytes.                                                                                        |
 |   FILENAME COUNT    |  uint32   |      4     | Number of file names, representing the number of entries in `FILENAME OFFSET LIST` and `FILE NAMES`.                                   |
 |      unknown 1      |     -     |      4     | Unknown field. `10 00 00 00` is commonly seen across multiple files.                                                                   |
-|  FILE NAMES OFFSET  |  uint32   |      4     | Relative offset where `FILE NAMES` starts, based on the beginning of `STR OFFSET COUNT`.<br>Simply put, it’s the last offset in `FILENAME OFFSET LIST PADDING` minus the starting offset of `FILENAME COUNT`. |
+|  FILE NAMES OFFSET  |  uint32   |      4     | Relative offset where `FILE NAMES` starts, based on the beginning of `FILENAME COUNT`.<br>Simply put, it’s the last offset in `FILENAME OFFSET LIST PADDING` minus the starting offset of `FILENAME COUNT`. |
 |    TABLE SIZE 2     |  uint32   |      4     | Presumably the same value as `TABLE SIZE 1`.<br>The purpose of this field is unknown.                                                  |
 | FILENAME OFFSET LIST | uint32[] | `FILENAME COUNT` | Offsets for each string (file name), relative to the start of `FILE NAMES`.                                                            |
 |FILENAME OFFSET LIST PADDING | byte[] |      n     | Zero padding to make the size of `FILENAME OFFSET LIST` a multiple of 16 bytes.                                                        |

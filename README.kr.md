@@ -33,7 +33,7 @@ apk 파일과 idx 파일은 일부 콘솔 게임 등에서 발견되는 포맷�
 `Check the file is a valid ??-bit library.` 오류가 발생하는 경우 dll 파일과 Windows의 아키텍처가 일치하지 않아 발생할 수 있습니다.
 자신의 컴퓨터가 32비트라면 x86 폴더의 파일을, 64비트라면 x64 폴더의 dll 파일을 사용하세요.
 
-##  Could not locate file to link.
+## Could not locate file to link.
 `Could not locate file to link.` 오류가 발생하는 경우 dll 파일의 이름이 `LibApkIdxTemdplate.dll`가 맞는지 확인해주세요.
 
 현재 라이브러리는 Windows만 지원하므로 리눅스 등에서 실행하는 경우 `APK.bt` 대신 `APK-nolib.bt` 파일을 사용해주세요.
@@ -71,7 +71,8 @@ apk 파일과 idx 파일은 일부 콘솔 게임 등에서 발견되는 포맷�
 |:--------------------:|:------:|:--:|:-------------------------------------------------------------------------------------------------------|
 |      SIGNATURE       | char[] | 8  | 테이블의 시그니처 바이트. 항상 `PACKHEDR`이다.                                                                        |
 |      TABLE SIZE      | uint64 | 8  | 테이블의 첫 16바이트를 제외한 테이블의 크기.                                                                             |
-|      unknown 1       |   -    | 8  | 알 수 없는 영역.<br>여러 파일에서 `00 00 01 00 00 00 00 00`이 공통으로 보인다.                                             |
+|      unknown 1       |   -    | 4  | 알 수 없는 영역.<br>여러 파일에서 `00 00 01 00`이 공통으로 보인다.                                             |
+|      NAME_IDX       |   uint32    | 4  | 해당 apk 파일의 이름의 NAME_IDX이다.<br>보통 `xxx/yyy.apk` 형식임.                                             |
 |   FILE LIST OFFSET   | uint32 | 4  | 실제 파일의 나열이 시작되는 지점의 오프셋.                                                                               |
 | ARCHIVE PADDING TYPE | uint32 | 4  | 아카이브 패딩 시 블록 크기를 지정하는 것으로 추정.<br>`1 (0x0001)`: 2048로 나누어 떨어지도록 패딩.<br>`2 (0x0002)`: 512로 나누어 떨어지도록 패딩. |
 |         HASH         | byte[] | 16 | 파일의 MD5 해시 체크섬인 것이 거의 확실해 보이나, 실제로 어느 영역을 해싱한 것인지는 아직 알아내지 못했다.                                        |
@@ -134,7 +135,7 @@ apk 파일과 idx 파일은 일부 콘솔 게임 등에서 발견되는 포맷�
 |       명칭       |  자료형   | 크기 | 설명                                                                            |
 |:--------------:|:------:|:--:|:------------------------------------------------------------------------------|
 |    NAME IDX    | uint32 | 4  | 각 아카이브에 포함된 `GENESTRT` 테이블의 `FILE NAMES` 배열의 인덱스.<br>이 인덱스로 파일의 이름을 가져올 수 있다. |
-|      ZERO      | byte[] | 4  | 4바이트 길이의 `0`바이트로 채워진 영역.<br>왜 이렇게 되어있는지는 알 수 없음.                              |
+|      unknown_1      | uint32 | 4  | 4바이트 길이의 `0`바이트로 채워진 영역.<br>idx 파일에서는 `1`로 나타나는듯 하다.                             |
 | ARCHIVE OFFSET | uint64 | 8  | 파일 상에서 아카이브가 실제로 위치한 영역의 시작점.<br>오프셋은 파일의 처음을 기준으로한다.                         |
 |  ARCHIVE SIZE  | uint64 | 8  | 아카이브의 패딩을 제외한 실제 크기(바이트 단위).                                                  |
 |      HASH      | byte[] | 16 | 아카이브의 패딩을 제외한 아카이브 전체의 MD5 해시값.                                               |
@@ -147,7 +148,7 @@ apk 파일과 idx 파일은 일부 콘솔 게임 등에서 발견되는 포맷�
 |         TABLE SIZE 1         |  uint64  |         8          | 테이블의 첫 16바이트를 제외한 테이블의 크기.                                                                                                                                        |
 |        FILENAME COUNT        |  uint32  |         4          | 파일 이름의 개수로, `FILENAME OFFSET LIST`와 `FILE NAMES`가 포함하는 항목의 개수이다.                                                                                                  |
 |          unknown 1           |    -     |         4          | 알 수 없는 영역.<br>여러 파일에서 `10 00 00 00`이 공통으로 보인다.                                                                                                                    |
-|      FILE NAMES OFFSET       |  uint32  |         4          | 테이블 헤더 다음(`STR OFFSET COUNT`의 오프셋)을 기준으로 `FILE NAMES`가 시작되는 상대적인 오프셋이다.<br>간단히 설명하면, `FILENAME OFFSET LIST PADDING`의 마지막 오프셋에서 `FILENAME COUNT`의 시작 오프셋을 뺀 값이다. |
+|      FILE NAMES OFFSET       |  uint32  |         4          | 테이블 헤더 다음(`FILENAME COUNT`의 오프셋)을 기준으로 `FILE NAMES`가 시작되는 상대적인 오프셋이다.<br>간단히 설명하면, `FILENAME OFFSET LIST PADDING`의 마지막 오프셋에서 `FILENAME COUNT`의 시작 오프셋을 뺀 값이다. |
 |         TABLE SIZE 2         |  uint32  |         4          | `TABLE SIZE 1`과 동일한 값으로 추정.<br>이 필드의 존재 이유는 알 수 없음.                                                                                                               |
 |     FILENAME OFFSET LIST     | uint32[] | `FILENAME COUNT` | `FILE NAMES` 영역의 시작점을 기준으로 하는<br>각 문자열(파일명)의 오프셋이다.                                                                                                               |
 | FILENAME OFFSET LIST PADDING |  byte[]  |         n          | `FILENAME OFFSET LIST`의 크기가 16바이트로 나누어 떨어지도록 하기 위한 0 패딩.                                                                                                          |
@@ -263,7 +264,7 @@ ROOT 파일들이 모두 나열되었으면 이제 아카이브를 나열할 차
 |         TABLE SIZE 1         |  uint64  |         8          | 테이블의 첫 16바이트를 제외한 테이블의 크기.                                                                                                                                        |
 |        FILENAME COUNT        |  uint32  |         4          | 파일 이름의 개수로, `FILENAME OFFSET LIST`와 `FILE NAMES`가 포함하는 항목의 개수이다.                                                                                                  |
 |          unknown 1           |    -     |         4          | 알 수 없는 영역.<br>여러 파일에서 `10 00 00 00`이 공통으로 보인다.                                                                                                                    |
-|      FILE NAMES OFFSET       |  uint32  |         4          | 테이블 헤더 다음(`STR OFFSET COUNT`의 오프셋)을 기준으로 `FILE NAMES`가 시작되는 상대적인 오프셋이다.<br>간단히 설명하면, `FILENAME OFFSET LIST PADDING`의 마지막 오프셋에서 `FILENAME COUNT`의 시작 오프셋을 뺀 값이다. |
+|      FILE NAMES OFFSET       |  uint32  |         4          | 테이블 헤더 다음(`FILENAME COUNT`의 오프셋)을 기준으로 `FILE NAMES`가 시작되는 상대적인 오프셋이다.<br>간단히 설명하면, `FILENAME OFFSET LIST PADDING`의 마지막 오프셋에서 `FILENAME COUNT`의 시작 오프셋을 뺀 값이다. |
 |         TABLE SIZE 2         |  uint32  |         4          | `TABLE SIZE 1`과 동일한 값으로 추정.<br>이 필드의 존재 이유는 알 수 없음.                                                                                                               |
 |     FILENAME OFFSET LIST     | uint32[] | `FILENAME COUNT` | `FILE NAMES` 영역의 시작점을 기준으로 하는<br>각 문자열(파일명)의 오프셋이다.                                                                                                               |
 | FILENAME OFFSET LIST PADDING |  byte[]  |         n          | `FILENAME OFFSET LIST`의 크기가 16바이트로 나누어 떨어지도록 하기 위한 0 패딩.                                                                                                          |
@@ -282,7 +283,7 @@ ROOT 파일들이 모두 나열되었으면 이제 아카이브를 나열할 차
 `TABLE END PADDING`이 없다는 것을 제외하면 위에서 나온 `GENESTRT` 테이블과 동일하다.
 
 
-### 아카이브 파일들의 나열 
+### 아카이브 파일들의 나열
 
 ROOT 파일과 유사하게 아카이브에 포함된 파일도 나열된다.
 그러나 패딩 방식이 약간 다르다.
@@ -349,7 +350,8 @@ apk 파일의 `ENDILTLE` 테이블과 동일하다.
 |:----------------:|:------:|:--:|:----------------------------------------------------------------|
 |    SIGNATURE     | char[] | 8  | 테이블의 시그니처 바이트. 항상 `PACKHEDR`이다.                                 |
 |    TABLE SIZE    | uint64 | 8  | 테이블의 첫 16바이트를 제외한 테이블의 크기.                                      |
-|    unknown 1     |   -    | 8  | 알 수 없는 영역.<br>여러 파일에서 `00 00 01 00 00 00 00 00`이 공통으로 보인다.      |
+|      unknown 1       |   -    | 4  | 알 수 없는 영역.<br>여러 파일에서 `00 00 01 00`이 공통으로 보인다.                                             |
+|      NAME_IDX       |   uint32    | 4  | 해당 apk 파일의 이름의 NAME_IDX이다.<br>보통 `xxx/yyy.apk` 형식임.                                             |
 | FILE LIST OFFSET | uint32 | 4  | 실제 파일의 나열이 시작되는 지점의 오프셋.                                        |
 | ARCHIVE PADDING TYPE | uint32 | 4  | 아카이브 패딩 시 블록 크기를 지정하는 것으로 추정.<br>`1 (0x0001)`: 2048로 나누어 떨어지도록 패딩.<br>`2 (0x0002)`: 512로 나누어 떨어지도록 패딩. |
 |       HASH       | byte[] | 16 | 파일의 MD5 해시 체크섬인 것이 거의 확실해 보이나, 실제로 어느 영역을 해싱한 것인지는 아직 알아내지 못했다. |
@@ -406,7 +408,7 @@ apk 파일의 `PACKFSLS`와 구조는 동일하다.
 |       명칭       |  자료형   | 크기 | 설명                                                                            |
 |:--------------:|:------:|:--:|:------------------------------------------------------------------------------|
 |    NAME IDX    | uint32 | 4  | 각 아카이브에 포함된 `GENESTRT` 테이블의 `FILE NAMES` 배열의 인덱스.<br>이 인덱스로 파일의 이름을 가져올 수 있다. |
-|      ZERO      | byte[] | 4  | 4바이트 길이의 `0`바이트로 채워진 영역.<br>왜 이렇게 되어있는지는 알 수 없음.                              |
+|      unknown_1      | uint32 | 4  | 4바이트 길이의 `0`바이트로 채워진 영역.<br>idx 파일에서는 `1`로 나타나는듯 하다.                             |
 | ARCHIVE OFFSET | uint64 | 8  | 파일 상에서 아카이브가 실제로 위치한 영역의 시작점.<br>오프셋은 파일의 처음을 기준으로한다.                         |
 |  ARCHIVE SIZE  | uint64 | 8  | 아카이브의 패딩을 제외한 실제 크기(바이트 단위).                                                  |
 |      HASH      | byte[] | 16 | 아카이브의 패딩을 제외한 아카이브 전체의 MD5 해시값.                                               |
