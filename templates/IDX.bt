@@ -1,17 +1,18 @@
 //------------------------------------------------
 //--- 010 Editor v14.0.1 Binary Template
 //
-//      File: IDX.bt
+//      File: APK.bt
 //   Authors: akio7624
-//   Version: 1.2
-//   Purpose: Parsing idx files found alongside apk archive files in some console games.
+//   Version: 1.3
+//   Purpose: Parse APK archives found in some console games (not Android APKs)
 //  Category: Game
-// File Mask: *.idx
+// File Mask: *.apk
 //  ID Bytes: 45 4E 44 49 4C 54 4C 45  // ENDILTLE
 //   History: 
 //   1.0   2024-10-31 Initial release
 //   1.1   2024-11-01 Newly identified items have been incorporated
 //   1.2   2024-11-01 Modify segment structure if IDENTIFIER in TOC_SEGMENT is 1 (indicates a directory).
+//   1.3   2024-12-08 Change PACKHEDR.unknown_1 to NAME_IDX, ARCHIVE_SEGMENT.ZERO to unknown_1
 //
 //------------------------------------------------
 //
@@ -94,7 +95,8 @@ struct _ENDILTLE {
 struct _PACKHEDR {
     char SIGNATURE[8] <bgcolor=cLtGreen>;
     uint64 TABLE_SIZE <bgcolor=cLtAqua>;
-    byte unknown_1[8] <bgcolor=cLtGray>;
+    byte unknown_1[4] <bgcolor=cLtGray>;
+    uint32 NAME_IDX <bgcolor=cLtPurple>;
     uint32 FILE_LIST_OFFSET <format=hex, bgcolor=cLtRed>;
     uint32 ARCHIVE_PADDING_TYPE <bgcolor=cLtPurple, comment=MakeArchivePaddingTypeComment(this)>;
     byte HASH[16] <format=hex, bgcolor=cSilver>;
@@ -125,7 +127,7 @@ struct _PACKTOC {
 
 struct _ARCHIVE_SEGMENT {
     uint32 NAME_IDX <fgcolor=cWhite, bgcolor=cDkPurple, comment=GetFnameFromNameIdx(this)>;
-    byte ZERO[4] <bgcolor=0x8d917a>;
+    uint32 unknown_1 <bgcolor=0x8d917a>;
     uint64 ARCHIVE_OFFSET <bgcolor=0xa7b193>;
     uint64 ARCHIVE_SIZE <format=hex, bgcolor=0xa2c299>;
     byte ARCHIVE_HASH[16] <format=hex, bgcolor=0xb8fedb>;
